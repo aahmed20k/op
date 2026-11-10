@@ -1,4 +1,6 @@
-<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+</head><body>
 <title>First Call</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 <style>
@@ -2136,7 +2138,14 @@ const MEDIA={
  'uveitis:sle':{f:'uveitis_synechiae.jpg',credit:'EyeRounds case 334',lic:'ER-CASE',cap:'Posterior synechiae with pigment on the lens capsule'},
  'uveitis:dilate':{f:'uveitis_kp.jpg',credit:'Jesse Vislisel, MD; photo Stefani Karakas, CRA',lic:'ER-ATLAS',cap:'Keratic precipitates'},
 };
-function mediaFor(caseId,orderId,s){ const m=MEDIA[caseId+':'+orderId]; if(!m) return ''; if(m.when && !m.when(s)) return ''; return `<div class="photo"><img src="images/${m.f}" alt="${esc(m.cap)}" loading="lazy" onerror="this.parentNode.style.display='none'"><div class="cap">${esc(m.cap)} — ${esc(m.credit)}. ${esc(LIC[m.lic])}.</div></div>`; }
+const SRCPAGE={aacg:'https://eyerounds.org/atlas/pages/acute-angle-closure.html',crao:'https://eyerounds.org/atlas/pages/CRAO',gca:'https://eyerounds.org/atlas/pages/Giant-Cell-Arteritis-Temporal-Arteritis-GCA.html',globe:'https://eyerounds.org/atlas/pages/Open-globe.html',globe_seidel:'https://eyerounds.org/atlas/pages/corneal-perforation-seidel-posative-.html',orbcell:'https://eyerounds.org/cases/103-Pediatric-Orbital-Cellulitis.htm',rd:'https://eyerounds.org/atlas/pages/Rhegmatogenous-ret-detach.htm',endoph:'https://eyerounds.org/atlas/pages/hypopyon.html',chem:'https://eyerounds.org/cases/307-chemical-eye-injury.htm',cn3:'https://eyerounds.org/cases/280-self-resolving-ischemic-TNP.htm',ulcer:'https://eyerounds.org/atlas/pages/Pseudomonas-keratitis/index.htm',rbh_proptosis:'https://eyerounds.org/atlas/pages/retrobulbar-hemorrhage.html',rbh_ct:'https://eyerounds.org/cases/168-orbital-compartment-syndrome.htm',hyphema:'https://eyerounds.org/atlas/pages/Hyphema/index.htm',preseptal:'https://eyerounds.org/atlas/pages/Preseptal-cellulitis-2.html',hzo_rash:'https://eyerounds.org/atlas/pages/Herpes-Zoster.html',hzo_pseudodendrites:'https://eyerounds.org/atlas/pages/VZV-keratitis/',uveitis_synechiae:'https://www.eyerounds.org/cases/334-HLA-B27-associated-Acute-Anterior-Uveitis.htm',uveitis_kp:'https://eyerounds.org/atlas/pages/KP-Keratic-precipitates-in-JIA/index.htm'};
+const LICURL={'ER-ATLAS':'https://creativecommons.org/licenses/by-nc-nd/3.0/','ER-CASE':'https://eyerounds.org/','RADIO':'https://creativecommons.org/licenses/by-nc-sa/3.0/'};
+function srcPage(m){ const b=m.f.replace(/\.jpg$/,''); return SRCPAGE[b]||SRCPAGE[b.split('_')[0]]||'https://eyerounds.org/'; }
+function mediaKey(caseId,orderId,s){ const k=caseId+':'+orderId; const m=MEDIA[k]; if(!m) return null; if(m.when && !m.when(s)) return null; return k; }
+/* hideCap: during "what do you see?" only the credit shows, not the descriptive caption */
+function photoHtml(k,hideCap){ const m=MEDIA[k]; if(!m) return ''; return `<div class="photo"><img src="images/${m.f}" alt="${hideCap?'Clinical photograph':esc(m.cap)}" onerror="this.parentNode.style.display='none';var s=this.closest('.note');if(s)s.querySelectorAll('.schem').forEach(function(x){x.style.display=''});"><div class="cap">${hideCap?'':esc(m.cap)+' — '}${esc(m.credit)}. ${esc(LIC[m.lic])}.</div></div>`; }
+function mediaFor(caseId,orderId,s){ const k=mediaKey(caseId,orderId,s); return k?photoHtml(k,false):''; }
+function caseImageRefs(caseId){ const seen={}; return Object.entries(MEDIA).filter(([k,m])=>k.startsWith(caseId+':') && !seen[m.f] && (seen[m.f]=1)).map(([k,m])=>({cap:m.cap,credit:m.credit,lic:LIC[m.lic],licUrl:LICURL[m.lic],url:srcPage(m)})); }
 </script>
 <style>.photo{margin-top:8px;max-width:420px}.photo img{display:block;width:100%;height:auto;border:1px solid #888;background:#000}</style>
 <style>
@@ -2248,7 +2257,7 @@ function resolve(P,p){
   let r=c.results[p.id]; if(r==null) r=DEFAULTS[p.id]; if(r==null) r=(o.c==='Medication')? GENERIC_MED:'Done.';
   if(typeof r==='function') r=r(P); if(typeof r==='string') r={text:r};
   let text=r.text; if(p.id==='sle' && P.loc==='ED') text='(Portable slit lamp in the ED.) '+text;
-  const entry={t:p.resultAt,tab,title:o.n,text,fig:r.fig||null,cap:r.cap||'',photo:mediaFor(c.id,p.id,P),byPhone:p.rec.byPhone};
+  const entry={t:p.resultAt,tab,title:o.n,text,fig:r.fig||null,cap:r.cap||'',photoKey:mediaKey(c.id,p.id,P),byPhone:p.rec.byPhone};
   (c.see||[]).forEach((q,i)=>{ if(P.quiz[i]==null && q.on.includes(p.id) && entry.quiz==null){ P.quiz[i]={pending:true,opts:shuffle(q.opts)}; entry.quiz=i; } });
   P.feed.push(entry);
   if(!(P===S && TAB===tab)) P.unread[tab]=(P.unread[tab]||0)+1;
@@ -2655,7 +2664,7 @@ function renderChart(){
 }
 function entryHtml(e){
   const qz=e.quiz!=null? S.quiz[e.quiz] : null;
-  const media=`${e.photo||''}${e.fig?`<div class="fig">${e.fig}</div>${e.cap&&!(qz&&qz.pending)?`<div class="cap">${esc(e.cap)}</div>`:''}`:''}`;
+  const media=`${e.photoKey?photoHtml(e.photoKey,!!(qz&&qz.pending)):''}${e.fig?`<div class="schem" ${e.photoKey?'style="display:none"':''}><div class="fig">${e.fig}</div>${e.cap&&!(qz&&qz.pending)?`<div class="cap">${esc(e.cap)}</div>`:''}</div>`:''}`;
   let quiz='';
   if(qz){ if(qz.pending) quiz=`<div class="quiz"><b>What do you see?</b> <span class="small">Select all that apply, then submit to read the full report.</span>${qz.opts.map((o,j)=>`<label><input type="checkbox" data-qz="${e.quiz}" value="${j}"> ${esc(o[0])}</label>`).join('')}<div class="row" style="margin-top:6px"><button class="btn" data-quiz="${e.quiz}">Submit</button></div></div>`;
     else quiz=`<div class="quiz"><b>What you saw — ${Math.round(qz.score*100)}%</b>${qz.opts.map((o,j)=>{ const s=qz.sel.includes(j); return `<div class="${o[1]?'r':s?'w':''}">${o[1]?'✓':s?'✗':'·'} ${esc(o[0])}${o[1]&&!s?' <span class="small">(missed)</span>':''}${!o[1]&&s?' <span class="small">(not present)</span>':''}</div>`; }).join('')}</div>`; }
@@ -2791,14 +2800,32 @@ function renderFeedback(){
      <fieldset class="group"><legend>Teaching points</legend><div class="list"><ul>${c.teaching.map(t=>`<li>${esc(t)}</li>`).join('')}</ul><div class="oncall"><b>On call, as a PGY-2:</b> ${esc(c.onCall)}</div></div></fieldset>
      <fieldset class="group"><legend>Logistics to know before this happens to you</legend><div class="list">${c.logi.map(k=>`<div class="it"><span class="m">▸</span><div><b>${esc(LOGI[k][0])}</b><div class="why">${esc(DATA.logi[k]||LOGI[k][1])}</div></div><span></span></div>`).join('')}</div></fieldset>
      <fieldset class="group"><legend>Order timeline</legend><div class="list">${P.orders.filter(o=>o.status!=='cancelled').map(o=>`<div class="it ${o.failed?'late':critIds.has(o.id)?'ok':harmIds.has(o.id)?'harm':''}"><span class="m">${o.failed?'×':critIds.has(o.id)?'•':harmIds.has(o.id)?'!':o.byPhone?'☎':''}</span><div>${esc(ORD[o.id].n.split(' (')[0])}${o.failed?' (failed)':''}</div><span class="when">${esc(shortTime(o.at))}</span></div>`).join('')||'<div class="it"><span></span><div class="small">No orders.</div><span></span></div>'}</div></fieldset>
-     <fieldset class="group"><legend>References</legend><p class="small">${c.sources.map(([n,u])=>`<a href="${u}" target="_blank" rel="noopener">${esc(n)}</a>`).join('<br>')}</p></fieldset>
      ${DATA.reviewer?reviewerForm(c):''}
     </div></div>
+   ${referencesHtml(c)}
    <div class="row right" style="margin-top:10px">${NIGHT?'<button class="btn def" id="backN">Back to the Night</button>':'<button class="btn" id="again">Repeat Case</button><button class="btn def" id="home">Case List</button>'}</div>
   </div></div>`;
   if(NIGHT) document.getElementById('backN').onclick=()=>{ VIEW='nightfb'; render(); };
   else { document.getElementById('again').onclick=()=>startCase(c.id); document.getElementById('home').onclick=()=>{ S=null; VIEW='start'; render(); }; }
   if(DATA.reviewer) wireReviewer(c);
+}
+const GENERAL_REFS=[
+ ['Bagheri N, Wajda BN, eds. The Wills Eye Manual: Office and Emergency Room Diagnosis and Treatment of Eye Disease, 8th ed. Wolters Kluwer; 2021.','https://www.wolterskluwer.com/en/solutions/ovid/the-wills-eye-manual-14286'],
+ ['American Academy of Ophthalmology. Basic and Clinical Science Course (BCSC), 2025–2026.','https://www.aao.org/education/bcsc'],
+ ['American Academy of Ophthalmology. Preferred Practice Pattern guidelines.','https://www.aao.org/education/preferred-practice-patterns'],
+ ['EyeWiki, American Academy of Ophthalmology.','https://eyewiki.aao.org/'],
+ ['EyeRounds.org, University of Iowa Department of Ophthalmology & Visual Sciences.','https://eyerounds.org/'],
+ ['National Board of Medical Examiners. USMLE Step 3 Primum Computer-based Case Simulations (CCS) — format on which this simulator is modeled.','https://www.usmle.org/prepare-your-exam/step-3-materials/step-3-ccs'],
+];
+function referencesHtml(c){
+  const imgs=caseImageRefs(c.id);
+  const li=(n,u)=>`<li>${esc(n)} <a href="${u}" target="_blank" rel="noopener">${esc(u.replace(/^https?:\/\//,''))}</a></li>`;
+  return `<fieldset class="group"><legend>References</legend><div class="list" style="padding:4px 8px">
+   <p style="margin:6px 0 2px"><b>Clinical content for this case</b></p><ol style="margin:0;padding-left:22px">${c.sources.map(([n,u])=>li(n,u)).join('')}</ol>
+   ${imgs.length?`<p style="margin:10px 0 2px"><b>Images</b></p><ol style="margin:0;padding-left:22px">${imgs.map(r=>`<li>${esc(r.cap)}. ${esc(r.credit)}. ${esc(r.lic)} (<a href="${r.licUrl}" target="_blank" rel="noopener">licence</a>). Source: <a href="${r.url}" target="_blank" rel="noopener">${esc(r.url.replace(/^https?:\/\//,''))}</a></li>`).join('')}</ol>`:''}
+   <p style="margin:10px 0 2px"><b>General references used across all cases</b></p><ol style="margin:0;padding-left:22px">${GENERAL_REFS.map(([n,u])=>li(n,u)).join('')}</ol>
+   <p class="small" style="margin:8px 0 4px">Drawings without a credit line are original schematics made for this simulator. Case vignettes are fictional and written from the references above.</p>
+  </div></fieldset>`;
 }
 function reviewerForm(c){
   const r=DATA.reviews[c.id]||{}; const items=[...c.critical.map(cr=>['C',cr.label]),...c.harmful.map(h=>['H',h.label]),['T','Triage: best response is "'+(TRIAGE_OPTS.find(x=>x[0]===c.triage.best)||[0,''])[1]+'"'],['P','Expected plan on the phone: '+c.sbar.plan]];
